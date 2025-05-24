@@ -1,4 +1,5 @@
 from flask import Flask, request, make_response
+from database import init_sqlite_db
 import logging
 import sys
 import xml.etree.ElementTree as ET
