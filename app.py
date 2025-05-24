@@ -5,6 +5,7 @@ import sys
 import xml.etree.ElementTree as ET
 import base64 
 
+init_sqlite_db()
 app = Flask(__name__)
 
 # --- Constants for DRM Handshake Responses ---
