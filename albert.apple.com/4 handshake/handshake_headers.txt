@@ -1,0 +1,16 @@
+Key
+				Value
+server				Apple
+date				Thu, 13 Jun 2024 06:56:27 GMT
+content-type			application/xml
+transfer-encoding		chunked
+connection			close
+cache-control			no-cache, no-store, max-age=0, must-revalidate
+pragma	no-cache
+expires				0
+strict-transport-security	max-age=31536000; includeSubdomains
+referrer-policy			no-referrer
+x-b3-traceid			32d9c3658680c67a
+x-frame-options			SAMEORIGIN
+x-content-type-options		nosniff
+x-xss-protection		1; mode=block

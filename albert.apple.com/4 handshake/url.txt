@@ -1,0 +1,3 @@
+https://albert.apple.com/deviceservices/drmHandshake
+
+application/xml
