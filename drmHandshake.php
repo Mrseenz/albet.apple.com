@@ -182,3 +182,131 @@ exit;
 // echo "DRM Handshake data received and parsed."; // Example positive output for testing
 
 ?>
+
+<?php
+/*
+Testing Instructions for drmHandshake.php:
+
+The following are example `curl` commands for testing different DRM handshake scenarios.
+Replace `<your_server_url>` with the actual URL where `drmHandshake.php` is hosted.
+You will need to create the specified XML payload files (e.g., `type1_payload.xml`)
+with the content provided below, or adjust the path in the `curl` command accordingly.
+
+The script's final output is a JSON string. This JSON string represents an object (or array)
+where keys are stringified numerical indices (e.g., "0", "1", "2") and values are the
+decimal ASCII codes for each character of an *internally generated XML Plist response string*.
+
+1. Test Type 1 DRM Handshake (CollectionBlob & HandshakeRequestMessage)
+
+   This test simulates a request containing both `CollectionBlob` and `HandshakeRequestMessage`.
+
+   Payload file (`type1_payload.xml`):
+   ------------------------------------
+   <?xml version="1.0" encoding="UTF-8"?>
+   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+   <plist version="1.0">
+   <dict>
+       <key>UniqueDeviceID</key>
+       <string>test-udid-type1</string>
+       <key>CollectionBlob</key>
+       <data>SAMPLECOLLECTIONBLOBDATA</data> <!-- This is placeholder data -->
+       <key>HandshakeRequestMessage</key>
+       <data>SAMPLEHANDSHAKEREQUESTMESSAGEDATA</data> <!-- This is placeholder data -->
+   </dict>
+   </plist>
+   ------------------------------------
+
+   Curl command:
+   curl -X POST -H "Content-Type: application/xml" --data "@type1_payload.xml" <your_server_url>/drmHandshake.php
+
+   Expected response:
+   The output will be a JSON string representing an object where keys are stringified indices
+   ('0', '1', '2', ...) and values are the decimal ASCII codes for each character of the
+   internally generated XML Plist response string.
+   For this Type 1 request, the internal XML Plist string would start with:
+   '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" ...'
+   and contain the Type 1 constants (SERVER_KP_TYPE1, FDR_BLOB_TYPE1, etc.).
+
+   For example, if an internal XML string was `<A>Z</A>`, the output JSON (of ASCII codes) would be:
+   `{"0":60,"1":65,"2":62,"3":90,"4":60,"5":47,"6":65,"7":62}`
+   (This example is purely illustrative of the format, not the actual DRM content.)
+
+   To verify the full output, you would need to construct the complete expected internal XML Plist string
+   for this case and then convert it to the described JSON of ASCII codes format for comparison.
+
+
+2. Test Type 2 DRM Handshake (DRMRequest)
+
+   This test simulates a request containing a `DRMRequest`.
+
+   Payload file (`type2_payload.xml`):
+   ------------------------------------
+   <?xml version="1.0" encoding="UTF-8"?>
+   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+   <plist version="1.0">
+   <dict>
+       <key>UniqueDeviceID</key>
+       <string>test-udid-type2</string>
+       <key>DRMRequest</key>
+       <data>SAMPLEDREQUESTDATA</data> <!-- This is placeholder base64 encoded data -->
+   </dict>
+   </plist>
+   ------------------------------------
+
+   Curl command:
+   curl -X POST -H "Content-Type: application/xml" --data "@type2_payload.xml" <your_server_url>/drmHandshake.php
+
+   Expected response:
+   The output will be a JSON string representing an object of ASCII codes from the
+   internally generated XML Plist response string.
+   For this Type 2 request, the internal XML Plist string would start with:
+   '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" ...'
+   and contain the STEP4 constants (SERVER_KP_STEP4, FDR_BLOB_STEP4, etc.).
+
+   Illustrative format example (same as Type 1): if an internal XML string was `<A>Z</A>`,
+   the output JSON (of ASCII codes) would be:
+   `{"0":60,"1":65,"2":62,"3":90,"4":60,"5":47,"6":65,"7":62}`
+
+   Full verification requires comparing against the ASCII-encoded version of the complete
+   expected internal XML Plist string for this case.
+
+
+3. Test Default/Fallback DRM Handshake
+
+   This test simulates a request that does not meet the criteria for Type 1 or Type 2.
+   For example, sending an XML with `UniqueDeviceID` but missing the other key DRM fields.
+
+   Payload file (`fallback_payload.xml`):
+   ---------------------------------------
+   <?xml version="1.0" encoding="UTF-8"?>
+   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+   <plist version="1.0">
+   <dict>
+       <key>UniqueDeviceID</key>
+       <string>test-udid-fallback</string>
+       <key>SomeOtherKey</key>
+       <string>SomeValue</string>
+   </dict>
+   </plist>
+   ---------------------------------------
+
+   Curl command:
+   curl -X POST -H "Content-Type: application/xml" --data "@fallback_payload.xml" <your_server_url>/drmHandshake.php
+
+   Expected response:
+   The output will be a JSON string representing an object of ASCII codes from the
+   internally generated XML Plist response string.
+   For this Fallback case, the internal XML Plist string would be structured like a Type 1 response,
+   starting with:
+   '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" ...'
+   and containing the Type 1 constants (SERVER_KP_TYPE1, FDR_BLOB_TYPE1, etc.).
+
+   Illustrative format example (same as Type 1): if an internal XML string was `<A>Z</A>`,
+   the output JSON (of ASCII codes) would be:
+   `{"0":60,"1":65,"2":62,"3":90,"4":60,"5":47,"6":65,"7":62}`
+
+   Full verification requires comparing against the ASCII-encoded version of the complete
+   expected internal XML Plist string for this case.
+
+*/
+?>
