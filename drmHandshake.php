@@ -89,8 +89,8 @@ error_log("DRMHandshake - DRMRequestData: " . ($drmRequestData ? 'Present (lengt
 error_log("DRMHandshake - CollectionBlobData: " . ($collectionBlobData ? 'Present (length ' . strlen($collectionBlobData) . ')' : 'Not found'));
 error_log("DRMHandshake - HandshakeMessageData: " . ($handshakeMessageData ? 'Present (length ' . strlen($handshakeMessageData) . ')' : 'Not found'));
 
-// Initialize $drmData array to hold data for JSON conversion
-$drmData = [];
+// Initialize $xmlResponseString to hold the XML Plist string
+$xmlResponseString = '';
 
 // 6. Add PHP comments as placeholders for the next stages
 
@@ -105,60 +105,74 @@ define('SU_INFO_STEP4', "RkNvbnN0YW50cyBTdGVwIDQgU1VJTlJPIGZvciBEUk1SZXF1ZXN0");
 define('HANDSHAKE_RESPONSE_MESSAGE_STEP4', "SGFuZHNoYWtlUmVzcG9uc2VNZXNzYWdlIFN0ZXAgNCBQTEFDRUhPTERFUg==");
 
 /**
- * Converts an associative array of DRM data to a JSON string.
+ * Converts an XML string into a JSON string representing an object/array of its characters' ASCII values.
+ * Keys are stringified numerical indices.
  *
- * @param array $drmData Associative array with keys like 'serverKP', 'FDRBlob', etc.
- * @return string JSON encoded string.
+ * @param string $xmlString The input XML string.
+ * @return string JSON string of an object/array of ASCII values.
  */
-function convertDrmDataToJson(array $drmData): string {
-    return json_encode($drmData);
+function convertXmlStringToAsciiJson(string $xmlString): string {
+    $asciiArray = [];
+    foreach (str_split($xmlString) as $index => $char) {
+        $asciiArray[(string)$index] = ord($char);
+    }
+    return json_encode($asciiArray); // The user's example used JSON_PRETTY_PRINT,
+                                     // but for device communication, compact is usually preferred.
+                                     // Let's stick to compact for now unless specified otherwise.
 }
 
 // Type 1 DRM Handshake Logic (CollectionBlob & HandshakeRequestMessage)
 if (!empty($collectionBlobData) && !empty($handshakeMessageData)) {
     error_log("DRMHandshake - Type 1 request (CollectionBlob & HandshakeMessage) detected.");
-    error_log("DRMHandshake - Populating data for Type 1 JSON response.");
-    $drmData = [
-        'serverKP' => SERVER_KP_TYPE1,
-        'FDRBlob' => FDR_BLOB_TYPE1,
-        'SUInfo' => SU_INFO_TYPE1,
-        'HandshakeResponseMessage' => HANDSHAKE_RESPONSE_MESSAGE_TYPE1
-    ];
+    $xmlResponseString = '<?xml version="1.0" encoding="UTF-8"?>' .
+                         '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' .
+                         '<plist version="1.0"><dict>' .
+                         '    <key>serverKP</key><data>' . SERVER_KP_TYPE1 . '</data>' .
+                         '    <key>FDRBlob</key><data>' . FDR_BLOB_TYPE1 . '</data>' .
+                         '    <key>SUInfo</key><data>' . SU_INFO_TYPE1 . '</data>' .
+                         '    <key>HandshakeResponseMessage</key><data>' . HANDSHAKE_RESPONSE_MESSAGE_TYPE1 . '</data>' .
+                         '</dict></plist>';
+    error_log("DRMHandshake - Internal XML for Type 1 response generated. Converting to JSON of ASCII codes.");
 }
 
 // Type 2 DRM Handshake Logic (DRMRequest)
 elseif (!empty($drmRequestData)) {
     error_log("DRMHandshake - Type 2 request (DRMRequest) detected.");
-    error_log("DRMHandshake - Populating data for Type 2 JSON response.");
-    $drmData = [
-        'serverKP' => SERVER_KP_STEP4,
-        'FDRBlob' => FDR_BLOB_STEP4,
-        'SUInfo' => SU_INFO_STEP4,
-        'HandshakeResponseMessage' => HANDSHAKE_RESPONSE_MESSAGE_STEP4
-    ];
+    $xmlResponseString = '<?xml version="1.0" encoding="UTF-8"?>' .
+                         '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' .
+                         '<plist version="1.0"><dict>' .
+                         '    <key>serverKP</key><data>' . SERVER_KP_STEP4 . '</data>' .
+                         '    <key>FDRBlob</key><data>' . FDR_BLOB_STEP4 . '</data>' .
+                         '    <key>SUInfo</key><data>' . SU_INFO_STEP4 . '</data>' .
+                         '    <key>HandshakeResponseMessage</key><data>' . HANDSHAKE_RESPONSE_MESSAGE_STEP4 . '</data>' .
+                         '</dict></plist>';
+    error_log("DRMHandshake - Internal XML for Type 2 response generated. Converting to JSON of ASCII codes.");
 }
 
 // Default/Fallback DRM Handshake Logic
 // This executes if neither Type 1 nor Type 2 conditions were met.
 else {
-    error_log("DRMHandshake - Unknown request type or missing key fields. Defaulting to Type 1 response structure for JSON.");
-    $drmData = [
-        'serverKP' => SERVER_KP_TYPE1,
-        'FDRBlob' => FDR_BLOB_TYPE1,
-        'SUInfo' => SU_INFO_TYPE1,
-        'HandshakeResponseMessage' => HANDSHAKE_RESPONSE_MESSAGE_TYPE1
-    ];
+    error_log("DRMHandshake - Unknown request type or missing key fields. Generating default Type 1 XML internally.");
+    $xmlResponseString = '<?xml version="1.0" encoding="UTF-8"?>' .
+                         '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' .
+                         '<plist version="1.0"><dict>' .
+                         '    <key>serverKP</key><data>' . SERVER_KP_TYPE1 . '</data>' .
+                         '    <key>FDRBlob</key><data>' . FDR_BLOB_TYPE1 . '</data>' .
+                         '    <key>SUInfo</key><data>' . SU_INFO_TYPE1 . '</data>' .
+                         '    <key>HandshakeResponseMessage</key><data>' . HANDSHAKE_RESPONSE_MESSAGE_TYPE1 . '</data>' .
+                         '</dict></plist>';
+    error_log("DRMHandshake - Internal XML for Default (Type 1 structure) response generated. Converting to JSON of ASCII codes.");
 }
 
-// Convert the DRM data array to JSON
-$jsonResponse = convertDrmDataToJson($drmData);
+// Convert the generated XML string to a JSON array of ASCII codes
+$finalJsonResponse = convertXmlStringToAsciiJson($xmlResponseString);
 
 // Set the Content-Type header for JSON
 header('Content-Type: application/json');
 
-// Echo the JSON response
-error_log("DRMHandshake - Sending JSON response.");
-echo $jsonResponse;
+// Echo the final JSON response (array of ASCII codes)
+error_log("DRMHandshake - Sending JSON response (array of XML ASCII codes).");
+echo $finalJsonResponse;
 
 // Terminate script execution
 exit;
@@ -167,123 +181,4 @@ exit;
 // If we reach here, it means parsing was successful.
 // echo "DRM Handshake data received and parsed."; // Example positive output for testing
 
-?>
-
-<?php
-/*
-Testing Instructions for drmHandshake.php:
-
-The following are example `curl` commands for testing different DRM handshake scenarios.
-Replace `<your_server_url>` with the actual URL where `drmHandshake.php` is hosted.
-You will need to create the specified XML payload files (e.g., `type1_payload.xml`)
-with the content provided below, or adjust the path in the `curl` command accordingly.
-
-1. Test Type 1 DRM Handshake (CollectionBlob & HandshakeRequestMessage)
-
-   This test simulates a request containing both `CollectionBlob` and `HandshakeRequestMessage`.
-   The script should respond with an XML plist using the Type 1 constants.
-
-   Payload file (`type1_payload.xml`):
-   ------------------------------------
-   <?xml version="1.0" encoding="UTF-8"?>
-   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-   <plist version="1.0">
-   <dict>
-       <key>UniqueDeviceID</key>
-       <string>test-udid-type1</string>
-       <key>CollectionBlob</key>
-       <data>SAMPLECOLLECTIONBLOBDATA</data> <!-- This is placeholder data -->
-       <key>HandshakeRequestMessage</key>
-       <data>SAMPLEHANDSHAKEREQUESTMESSAGEDATA</data> <!-- This is placeholder data -->
-   </dict>
-   </plist>
-   ------------------------------------
-
-   Curl command:
-   curl -X POST -H "Content-Type: application/xml" --data "@type1_payload.xml" <your_server_url>/drmHandshake.php
-
-   Expected response:
-   Expected response will be a JSON object containing the Type 1 DRM data. Example:
-   ```json
-   {
-       "serverKP": "A05R4OoqHhIV/gKxjX8CMU5lCPwJzgibztKpyvjM7n/k0/h48wWqrG74RgGXz9nQN6SsLYf1c+0HQsbyq1u3ecIXY55IFU=",
-       "FDRBlob": "AAAABQAAABhDb2xsZWN0aW9uQmxvYjEAAABRAAAAE0ludGVncml0eVZhbHVlMQAAAAEAAAAETWVkaWFQcm90b2NvbAAAAAEAAAAFS2V5VHlwZQAAAAEAAABVQ29udGVudEtleUR1cmF0aW9uAAAAAQAAAFdDb250ZW50S2V5VHJhbnNmZXJLZXlQdWJsaWNLZXkAAAABAAAAU0NvbnRlbnRLZXlUcmFuc2ZlcktleURhdGEAAAABAAAAFlNlc3Npb25LZXlDcnlwdG9rZXkAAAABAAAAFVNlc3Npb25LZXlFbmNyeXB0ZWQAAAABAAAAEkhhbmRzaGFrZU1lc3NhZ2UAAAAB",
-       "SUInfo": "RkNvbnN0YW50cyBTVUlORk8gUExBQ0VIT0xERVI=",
-       "HandshakeResponseMessage": "SGFuZHNoYWtlUmVzcG9uc2VNZXNzYWdlIFR5cGUgMSBQTEFDRUhPTERFUg=="
-   }
-   ```
-   (Note: The actual output from `json_encode()` will be a compact single-line string.)
-
-
-2. Test Type 2 DRM Handshake (DRMRequest)
-
-   This test simulates a request containing a `DRMRequest`.
-   The script should respond with an XML plist using the "STEP4" constants.
-
-   Payload file (`type2_payload.xml`):
-   ------------------------------------
-   <?xml version="1.0" encoding="UTF-8"?>
-   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-   <plist version="1.0">
-   <dict>
-       <key>UniqueDeviceID</key>
-       <string>test-udid-type2</string>
-       <key>DRMRequest</key>
-       <data>SAMPLEDREQUESTDATA</data> <!-- This is placeholder base64 encoded data -->
-   </dict>
-   </plist>
-   ------------------------------------
-
-   Curl command:
-   curl -X POST -H "Content-Type: application/xml" --data "@type2_payload.xml" <your_server_url>/drmHandshake.php
-
-   Expected response:
-   Expected response will be a JSON object containing the Step 4 DRM data. Example:
-   ```json
-   {
-       "serverKP": "A1DSE5XkG7U9L1OBCe57jPzYx8Psw4Y8DQjGw9HjP7r6e9bS2bY9cZ7gHjK5dFvGhJkLpPqRsUvWxYzAbCdEfGhIjKlM=",
-       "FDRBlob": "AAAABQAAABhDb2xsZWN0aW9uQmxvYjQAAABRAAAAE0ludGVncml0eVZhbHVlNAAAAAEAAAAETWVkaWFQcm90b2NvbAAAAAEAAAAFS2V5VHlwZQAAAAEAAABVQ29udGVudEtleUR1cmF0aW9uAAAAAQAAAFdDb250ZW50S2V5VHJhbnNmZXJLZXlQdWJsaWNLZXkAAAABAAAAU0NvbnRlbnRLZXlUcmFuc2ZlcktleURhdGEAAAABAAAAFlNlc3Npb25LZXlDcnlwdG9rZXkAAAABAAAAFVNlc3Npb25LZXlFbmNyeXB0ZWQAAAABAAAAEkhhbmRzaGFrZU1lc3NhZ2UAAAAB",
-       "SUInfo": "RkNvbnN0YW50cyBTdGVwIDQgU1VJTlJPIGZvciBEUk1SZXF1ZXN0",
-       "HandshakeResponseMessage": "SGFuZHNoYWtlUmVzcG9uc2VNZXNzYWdlIFN0ZXAgNCBQTEFDRUhPTERFUg=="
-   }
-   ```
-   (Note: The actual output from `json_encode()` will be a compact single-line string.)
-
-
-3. Test Default/Fallback DRM Handshake
-
-   This test simulates a request that does not meet the criteria for Type 1 or Type 2.
-   For example, sending an XML with `UniqueDeviceID` but missing the other key DRM fields.
-   The script should respond with an XML plist structured like a Type 1 response.
-
-   Payload file (`fallback_payload.xml`):
-   ---------------------------------------
-   <?xml version="1.0" encoding="UTF-8"?>
-   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-   <plist version="1.0">
-   <dict>
-       <key>UniqueDeviceID</key>
-       <string>test-udid-fallback</string>
-       <key>SomeOtherKey</key>
-       <string>SomeValue</string>
-   </dict>
-   </plist>
-   ---------------------------------------
-
-   Curl command:
-   curl -X POST -H "Content-Type: application/xml" --data "@fallback_payload.xml" <your_server_url>/drmHandshake.php
-
-   Expected response:
-   Expected response will be a JSON object containing the Type 1 DRM data (as fallback). Example:
-   ```json
-   {
-       "serverKP": "A05R4OoqHhIV/gKxjX8CMU5lCPwJzgibztKpyvjM7n/k0/h48wWqrG74RgGXz9nQN6SsLYf1c+0HQsbyq1u3ecIXY55IFU=",
-       "FDRBlob": "AAAABQAAABhDb2xsZWN0aW9uQmxvYjEAAABRAAAAE0ludGVncml0eVZhbHVlMQAAAAEAAAAETWVkaWFQcm90b2NvbAAAAAEAAAAFS2V5VHlwZQAAAAEAAABVQ29udGVudEtleUR1cmF0aW9uAAAAAQAAAFdDb250ZW50S2V5VHJhbnNmZXJLZXlQdWJsaWNLZXkAAAABAAAAU0NvbnRlbnRLZXlUcmFuc2ZlcktleURhdGEAAAABAAAAFlNlc3Npb25LZXlDcnlwdG9rZXkAAAABAAAAFVNlc3Npb25LZXlFbmNyeXB0ZWQAAAABAAAAEkhhbmRzaGFrZU1lc3NhZ2UAAAAB",
-       "SUInfo": "RkNvbnN0YW50cyBTVUlORk8gUExBQ0VIT0xERVI=",
-       "HandshakeResponseMessage": "SGFuZHNoYWtlUmVzcG9uc2VNZXNzYWdlIFR5cGUgMSBQTEFDRUhPTERFUg=="
-   }
-   ```
-   (Note: The actual output from `json_encode()` will be a compact single-line string.)
-
-*/
 ?>
