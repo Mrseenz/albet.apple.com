@@ -1,243 +1,377 @@
 <?php
-// This library provides functions for interacting with iDevices using libimobiledevice tools.
+// This script (`lib_deviceactivation.php`) acts as a server-side HTTP endpoint.
+// It is designed to be used with `ideviceactivation.exe -s <URL_to_this_script>`.
+// It handles various stages of the iDevice activation process by receiving POST requests
+// (typically containing XML/plist data) from `ideviceactivation.exe`.
+// It sends back appropriate XML/plist or HTML responses to guide the activation.
+// The logic is based on the behavior of typical Apple activation servers.
 
 /*
-Potential Integration:
-This library (`lib_deviceactivation.php`) can be used by other PHP scripts or applications
-that need to programmatically interact with iDevices for information retrieval and activation.
-
-For example, the main `deviceactivation.php` script in this project could potentially
-use these functions:
-1. `get_device_info()`: Could be used to fetch device details when a device first connects
-   or at certain stages of the activation process, to supplement or verify information
-   received in POST requests.
-2. `activate_device()`: If the server-side logic needs to trigger activation directly,
-   this function could be called. However, the existing `deviceactivation.php` seems to
-   primarily respond to activation requests initiated by the device itself by providing
-   the correct plist/XML responses. This function would be more for a scenario where
-   the server *initiates* the activation with `ideviceactivation.exe`.
-
-Usage in a command-line tool:
-The functions in this library could also be wrapped in a command-line PHP script
-to allow administrators or automated systems to query device info or trigger activation.
-
 Error Handling:
-Ensure that the calling script implements robust error checking when using these functions,
-as interaction with external executables can be prone to failure (e.g., executables not found,
-device not connected, unexpected output).
+Robust error logging is implemented. Ensure the web server has write permissions
+for the PHP error log. All error messages from this script are prefixed with its basename.
 */
 
+// Ensure this script is accessed via POST
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405); // Method Not Allowed
+    error_log(basename(__FILE__) . " - Error: Only POST requests are allowed. Method: " . $_SERVER['REQUEST_METHOD']);
+    echo "Only POST requests are allowed.";
+    exit;
+}
+
+// Retrieve and log headers
+$userAgent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : 'Unknown';
+error_log(basename(__FILE__) . " - User-Agent: " . $userAgent);
+
+$contentType = isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE'] : 'Unknown';
+error_log(basename(__FILE__) . " - Content-Type: " . $contentType);
+
+// Get raw POST data
+$rawPostData = file_get_contents('php://input');
+if ($rawPostData === false) {
+    http_response_code(400); // Bad Request
+    error_log(basename(__FILE__) . " - Error: Could not read raw POST data.");
+    echo "Error reading POST data.";
+    exit;
+}
+error_log(basename(__FILE__) . " - Received raw POST data, length: " . strlen($rawPostData));
+
+// Initialize variables for storing extracted data (similar to deviceactivation.php)
+$activationInfoXMLString = null; // Will hold the primary XML content from POST if not form-urlencoded
+$innerXMLString = null;
+$innerXMLObject = null;
+$isCredentialsSubmission = false; // Flag for form-urlencoded submissions
+
+// Further processing will be added in subsequent steps...
+
 /**
- * Retrieves device information using ideviceinfo.
- *
- * @return array|false An associative array containing device information on success, or false on failure.
+ * Handles the "Step 3" credentials submission.
+ * This typically occurs when the device sends form-urlencoded data with login credentials.
+ * It responds with an HTML page containing a plist for the device to proceed.
  */
-function get_device_info() {
-    // TODO: Make this path configurable
-    // For now, assume ideviceinfo is in the system PATH or a known location.
-    // Adjust the path based on your system:
-    // - Linux/macOS: '/usr/local/bin/ideviceinfo' or just 'ideviceinfo' if in PATH
-    // - Windows: 'C:\Program Files\libimobiledevice\ideviceinfo.exe' or 'ideviceinfo.exe' if in PATH
-    $ideviceinfo_path = 'ideviceinfo'; // Or specify the full path
+function handle_credentials_submission() {
+    error_log(basename(__FILE__) . " - Credentials submission detected (handle_credentials_submission).");
 
-    // Execute the command
-    $output = shell_exec($ideviceinfo_path);
+    if (isset($_POST['login'])) {
+        error_log(basename(__FILE__) . " - Login parameter found in POST: " . $_POST['login']);
+    } else {
+        error_log(basename(__FILE__) . " - Login parameter NOT found in POST for credentials submission.");
+    }
 
-    // Check for execution errors
-    if ($output === null) {
-        error_log('Failed to execute ideviceinfo. Make sure it is installed and in your PATH.');
+    header('Content-Type: text/html');
+    echo '<!DOCTYPE html>';
+    echo '<html><head><title>iPhone Activation Step 3</title></head><body><script id="protocol" type="text/x-apple-plist">';
+    echo '<plist version="1.0"><dict><key>ActivationRecord</key><dict><key>unbrick</key><true/></dict></dict></plist>';
+    echo '</script></body></html>';
+    exit;
+}
+
+// Check Content-Type to determine how to process the POST data
+if (strpos($contentType, 'application/x-www-form-urlencoded') === 0) {
+    $isCredentialsSubmission = true;
+    // $_POST will be populated, no need to parse $rawPostData further for this type.
+    error_log(basename(__FILE__) . " - Content-Type is form-urlencoded. Setting isCredentialsSubmission to true.");
+} elseif (!empty($rawPostData)) {
+    // For other content types (e.g., application/xml, text/xml, multipart/form-data containing XML part),
+    // assume $rawPostData contains the primary XML payload.
+    $activationInfoXMLString = $rawPostData;
+    error_log(basename(__FILE__) . " - Assigning raw POST data to activationInfoXMLString, length: " . strlen($activationInfoXMLString));
+} else {
+    // No raw post data and not form-urlencoded, this might be an issue.
+    error_log(basename(__FILE__) . " - Warning: Content-Type is not form-urlencoded and raw POST data is empty.");
+    // Potentially send an error response or let it fall through to default handling.
+}
+
+// Handle Step 3: Credentials Submission Response (if form-urlencoded)
+if ($isCredentialsSubmission) {
+    handle_credentials_submission(); // This function will call exit()
+}
+
+// If not a credentials submission, proceed to parse $activationInfoXMLString...
+// (Further parsing logic will be added in the next subtask)
+
+/**
+ * Parses the outer XML (plist containing ActivationInfoXML) and the inner ActivationInfoXML.
+ *
+ * @param string $xmlString The raw XML string received in the POST request.
+ * @return SimpleXMLElement|null The parsed inner ActivationInfoXML object on success, or null on failure.
+ */
+function parse_activation_xml($xmlString) {
+    error_log(basename(__FILE__) . " - Starting XML parsing (parse_activation_xml).");
+
+    if (empty($xmlString)) {
+        error_log(basename(__FILE__) . " - Error: XML string is empty in parse_activation_xml.");
+        return null;
+    }
+
+    try {
+        // Disable libxml errors from echoing to stdout/stderr, and fetch them with libxml_get_errors()
+        libxml_use_internal_errors(true);
+        $outerXML = new SimpleXMLElement($xmlString);
+        $xmlErrors = libxml_get_errors();
+        libxml_clear_errors();
+        libxml_use_internal_errors(false);
+
+        if ($xmlErrors) {
+            foreach ($xmlErrors as $error) {
+                error_log(basename(__FILE__) . " - LibXMLError (Outer XML parsing): " . trim($error->message) . " on line " . $error->line);
+            }
+            error_log(basename(__FILE__) . " - Error parsing outer XML (plist). Full string: " . $xmlString);
+            return null;
+        }
+    } catch (Exception $e) {
+        error_log(basename(__FILE__) . " - Exception during outer XML (plist) parsing: " . $e->getMessage());
+        error_log(basename(__FILE__) . " - Outer XML string: " . $xmlString);
+        return null;
+    }
+
+    // Navigate to ActivationInfoXML data
+    // The structure is typically plist -> dict -> key (ActivationInfoXML) -> data
+    if (isset($outerXML->dict->key) && isset($outerXML->dict->data)) {
+        $activationInfoNode = null;
+        for ($i = 0; $i < count($outerXML->dict->key); $i++) {
+            if ((string)$outerXML->dict->key[$i] === 'ActivationInfoXML') {
+                $activationInfoNode = $outerXML->dict->data[$i];
+                break;
+            }
+        }
+
+        if ($activationInfoNode !== null) {
+            $base64EncodedInnerXML = (string)$activationInfoNode;
+            if (empty($base64EncodedInnerXML)) {
+                error_log(basename(__FILE__) . " - Error: ActivationInfoXML data node is empty.");
+                return null;
+            }
+
+            $innerXMLString = base64_decode($base64EncodedInnerXML, true); // Use strict mode
+            if ($innerXMLString === false) {
+                error_log(basename(__FILE__) . " - Error: Failed to base64 decode ActivationInfoXML. Original data (first 100 chars): " . substr($base64EncodedInnerXML, 0, 100));
+                return null;
+            }
+
+            if (empty($innerXMLString)) {
+                error_log(basename(__FILE__) . " - Error: Decoded inner XML string is empty.");
+                return null;
+            }
+
+            error_log(basename(__FILE__) . " - Successfully decoded inner XML, length: " . strlen($innerXMLString));
+            // error_log(basename(__FILE__) . " - Inner XML (first 200 chars): " . substr($innerXMLString, 0, 200));
+
+
+            try {
+                libxml_use_internal_errors(true);
+                $innerXMLObject = new SimpleXMLElement($innerXMLString);
+                $xmlErrorsInner = libxml_get_errors();
+                libxml_clear_errors();
+                libxml_use_internal_errors(false);
+
+                if ($xmlErrorsInner) {
+                    foreach ($xmlErrorsInner as $error) {
+                        error_log(basename(__FILE__) . " - LibXMLError (Inner XML parsing): " . trim($error->message) . " on line " . $error->line);
+                    }
+                    error_log(basename(__FILE__) . " - Error parsing inner ActivationInfoXML. Decoded string (first 200 chars): " . substr($innerXMLString, 0, 200));
+                    return null;
+                }
+                error_log(basename(__FILE__) . " - Successfully parsed inner ActivationInfoXML.");
+                return $innerXMLObject;
+            } catch (Exception $e) {
+                error_log(basename(__FILE__) . " - Exception during inner ActivationInfoXML parsing: " . $e->getMessage());
+                error_log(basename(__FILE__) . " - Inner XML string (first 200 chars): " . substr($innerXMLString, 0, 200));
+                return null;
+            }
+        } else {
+            error_log(basename(__FILE__) . " - Error: 'ActivationInfoXML' key not found in the plist structure.");
+            // error_log(basename(__FILE__) . " - Outer XML structure: " . $outerXML->asXML());
+            return null;
+        }
+    } else {
+        error_log(basename(__FILE__) . " - Error: Expected plist dict->key or dict->data structure not found in outer XML.");
+        // error_log(basename(__FILE__) . " - Outer XML structure: " . $outerXML->asXML());
+        return null;
+    }
+}
+
+// If not a credentials submission, and we have an XML string, try to parse it.
+if (!empty($activationInfoXMLString)) {
+    $innerXMLObject = parse_activation_xml($activationInfoXMLString);
+    if ($innerXMLObject === null) {
+        error_log(basename(__FILE__) . " - Failed to parse ActivationInfoXML or inner XML. Further processing based on innerXMLObject might be skipped.");
+    } else {
+        error_log(basename(__FILE__) . " - Successfully parsed inner XML.");
+    }
+} elseif (!$isCredentialsSubmission) {
+    // This case means it wasn't credentials submission, but activationInfoXMLString is also empty.
+    // This might happen if rawPostData was empty and it wasn't a form-urlencoded request.
+    error_log(basename(__FILE__) . " - Warning: Not a credentials submission and activationInfoXMLString is empty. Cannot parse XML.");
+}
+
+// (Further handling for different activation states based on $innerXMLObject will be added next)
+
+/**
+ * Handles the 'Unactivated' state, typically Step 2 (Activation Lock HTML).
+ *
+ * @param SimpleXMLElement|null $innerXML The parsed inner ActivationInfoXML object.
+ * @return bool True if handled (and script exited), false otherwise.
+ */
+function handle_unactivated_state($innerXML) {
+    if (!$innerXML instanceof SimpleXMLElement) {
+        error_log(basename(__FILE__) . " - handle_unactivated_state: Invalid innerXML provided.");
         return false;
     }
 
-    // Parse the output into an associative array
-    $device_info = [];
-    $lines = explode("\n", trim($output));
-    foreach ($lines as $line) {
-        $parts = explode(':', $line, 2);
-        if (count($parts) === 2) {
-            $key = trim($parts[0]);
-            $value = trim($parts[1]);
-            $device_info[$key] = $value;
+    // Path to ActivationState: dict -> key (ActivationRequestInfo) -> dict -> key (ActivationState) -> string
+    // Need to find the 'ActivationRequestInfo' dict first.
+    $activationRequestInfoDict = null;
+    foreach ($innerXML->dict->key as $index => $keyNode) {
+        if ((string)$keyNode === 'ActivationRequestInfo') {
+            $activationRequestInfoDict = $innerXML->dict->dict[$index]; // Assuming key and dict are paired
+            break;
         }
     }
 
-    // Check if parsing was successful (at least one key-value pair)
-    if (empty($device_info)) {
-        error_log('Failed to parse ideviceinfo output. Output: ' . $output);
-        return false;
+    if ($activationRequestInfoDict instanceof SimpleXMLElement) {
+        $activationState = null;
+        foreach ($activationRequestInfoDict->key as $index => $keyNode) {
+            if ((string)$keyNode === 'ActivationState') {
+                $activationState = (string)$activationRequestInfoDict->string[$index]; // Assuming key and string are paired
+                break;
+            }
+        }
+
+        if ($activationState === 'Unactivated') {
+            error_log(basename(__FILE__) . " - Step 2 (Activation Lock HTML) scenario detected (handle_unactivated_state).");
+            header('Content-Type: text/html');
+            echo '<!DOCTYPE html><html><head><title>iPhone Activation</title></head><body>Activation Lock</body></html>';
+            exit;
+        }
     }
-
-    return $device_info;
-}
-
-/**
- * Activates an iOS device using ideviceactivation.
- *
- * @param string|null $udid The UDID of the device to activate. If null, ideviceactivation might target the first connected device.
- * @return bool True on successful activation, false on failure.
- */
-function activate_device($udid = null) {
-    // TODO: Make this path configurable
-    // For now, assume ideviceactivation is in the system PATH or a known location.
-    // Adjust the path based on your system:
-    // - Linux/macOS: '/usr/local/bin/ideviceactivation' or just 'ideviceactivation' if in PATH
-    // - Windows: 'C:\Program Files\libimobiledevice\ideviceactivation.exe' or 'ideviceactivation.exe' if in PATH
-    $ideviceactivation_path = 'ideviceactivation'; // Or specify the full path
-
-    // Construct the command.
-    // The exact command structure for "ideviceactivation activate" needs to be verified.
-    // Assuming it might take a UDID or operate on the first connected device.
-    // For now, we'll use a basic "activate" command.
-    // If activation records are needed, the command would be like:
-    // $command = $ideviceactivation_path . " activate -s <path_to_activation_record.plist>";
-    $command = $ideviceactivation_path . ' activate';
-    if ($udid) {
-        // If ideviceactivation supports specifying a UDID, append it.
-        // This is a guess; the actual option might be different (e.g., -u <udid>)
-        // $command .= ' --udid ' . escapeshellarg($udid);
-    }
-
-    // Execute the command
-    // We need to capture stdout, stderr, and the exit code.
-    $descriptorspec = [
-        0 => ["pipe", "r"], // stdin
-        1 => ["pipe", "w"], // stdout
-        2 => ["pipe", "w"]  // stderr
-    ];
-    $pipes = [];
-    $process = proc_open($command, $descriptorspec, $pipes);
-
-    $stdout = '';
-    $stderr = '';
-    $exit_code = -1;
-
-    if (is_resource($process)) {
-        // Read stdout and stderr
-        $stdout = stream_get_contents($pipes[1]);
-        fclose($pipes[1]);
-        $stderr = stream_get_contents($pipes[2]);
-        fclose($pipes[2]);
-
-        // Get the exit code
-        $exit_code = proc_close($process);
-    } else {
-        error_log('Failed to execute ideviceactivation. Make sure it is installed and in your PATH.');
-        return false;
-    }
-
-    // Check for execution errors or non-zero exit code
-    if ($exit_code !== 0) {
-        error_log("ideviceactivation failed with exit code: $exit_code. Command: $command. Stderr: $stderr. Stdout: $stdout");
-        return false;
-    }
-
-    // Parse the output to determine success.
-    // The success criteria depend on the actual output of ideviceactivation.
-    // Let's assume for now that if the exit code is 0, and stderr is empty, it's a success.
-    // More sophisticated parsing might be needed based on ideviceactivation's output format (e.g., XML, specific strings).
-    // Example: Look for "ActivationSuccess" or similar in $stdout.
-    // The existing deviceactivation.php might have clues for XML parsing if the output is similar.
-    if (stripos($stdout, 'ActivationComplete') !== false || stripos($stdout, 'SUCCESS') !== false) {
-        // Consider it a success if "ActivationComplete" or "SUCCESS" is found in the output.
-        // This is a placeholder; actual success messages need to be confirmed.
-        return true;
-    } else if (empty($stderr) && $exit_code === 0 && !empty($stdout)) {
-        // If stderr is empty and exit code is 0, and there's some output,
-        // it might be a success. This is a less certain condition.
-        // Potentially log $stdout for review if it's not a clear success.
-        // error_log("ideviceactivation output might indicate success (exit code 0, empty stderr), but specific success message not found. Stdout: $stdout");
-        return true; // Or return false and log if stricter checking is needed.
-    }
-
-
-    // If we reach here, activation likely failed or the success condition wasn't met.
-    error_log("ideviceactivation output did not indicate clear success. Exit code: $exit_code. Command: $command. Stdout: $stdout. Stderr: $stderr");
     return false;
 }
 
-// --- Basic Usage Examples ---
-// The following are illustrative examples.
-// Ensure libimobiledevice tools are installed and in your system's PATH.
-// These examples should be adapted and tested in a development environment.
-// Do not run directly in a production environment without understanding the implications.
+/**
+ * Handles the 'Activated' state without ActivationRequestInfo, typically Step 5 (Final XML).
+ *
+ * @param SimpleXMLElement|null $innerXML The parsed inner ActivationInfoXML object.
+ * @return bool True if handled (and script exited), false otherwise.
+ */
+function handle_activated_state($innerXML) {
+    if (!$innerXML instanceof SimpleXMLElement) {
+        error_log(basename(__FILE__) . " - handle_activated_state: Invalid innerXML provided.");
+        return false;
+    }
 
-/*
-// Example: Get device information
-$deviceInfo = get_device_info();
-if ($deviceInfo) {
-    echo "Device Info:\n";
-    print_r($deviceInfo);
-    // Example: Accessing a specific piece of information
-    // if (isset($deviceInfo['UniqueDeviceID'])) {
-    //     $udid = $deviceInfo['UniqueDeviceID'];
-    //     echo "UDID: " . $udid . "\n";
-    // }
-} else {
-    echo "Failed to get device information.\n";
+    // Check for ActivationState directly under the root dict.
+    $activationState = null;
+    $activationRequestInfoFound = false;
+
+    if (isset($innerXML->dict->key)) {
+        for ($i = 0; $i < count($innerXML->dict->key); $i++) {
+            $keyName = (string)$innerXML->dict->key[$i];
+            if ($keyName === 'ActivationState') {
+                // Assuming the value is the next sibling string node or similar structure
+                // This depends heavily on the exact structure of $innerXML when ActivationState is at root level
+                // For now, let's assume it's paired with a <string> tag as the next sibling of <key>ActivationState</key>
+                // This might need adjustment based on actual XML structure for this state.
+                if(isset($innerXML->dict->string[$i])) { // This direct index pairing is an assumption
+                    $activationState = (string)$innerXML->dict->string[$i];
+                }
+            } elseif ($keyName === 'ActivationRequestInfo') {
+                $activationRequestInfoFound = true;
+            }
+        }
+    }
+
+
+    if ($activationState === 'Activated' && !$activationRequestInfoFound) {
+        error_log(basename(__FILE__) . " - Step 5 (Final Activation Record XML) scenario detected (handle_activated_state).");
+        header('Content-Type: application/xml');
+        echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>iphone-activation</key><dict><key>activation-ack</key><dict><key>ack-received</key><true/></dict></dict></dict></plist>';
+        exit;
+    }
+    return false;
 }
-*/
+
+/**
+ * Sends the default/fallback XML plist response.
+ * This is similar to the response `ideviceactivate` might expect when not using the -s service mode.
+ */
+function send_default_fallback_response() {
+    error_log(basename(__FILE__) . " - Proceeding with default XML plist response (ideviceactivate style) (send_default_fallback_response).");
+    header('Content-Type: application/xml');
+    // This is the large default/fallback XML from the original deviceactivation.php
+    echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>ActivationRecord</key><dict><key>ActivateDevice</key><string>true</string><key>ActivationInfoComplete</key><string>true</string><key>FairPlayCertReq</key><dict><key>FPSAP</key><data>...</data><key>FairPlayVersion</key><integer>2</integer></dict><key>FairPlayKeyData</key><data>...</data><key>InternationalMobileEquipmentIdentity</key><string>0</string><key>InternationalMobileSubscriberIdentity</key><string>0</string><key>PhoneNumber</key><string>0</string><key>ProductType</key><string>0</string><key>SerialNumber</key><string>0</string><key>SIMStatus</key><string>kCTSIMSupportSIMStatusNotInserted</string><key>UniqueDeviceID</key><string>0</string><key>WildcardTicket</key><string>0</string><key>unbrick</key><true/></dict><key>AccountToken</key><string>0</string><key>AccountTokenCertificate</key><data>...</data><key>AccountTokenSignature</key><data>...</data></dict></plist>';
+    exit;
+}
+
+
+// Attempt to handle specific states if innerXMLObject was parsed
+if ($innerXMLObject instanceof SimpleXMLElement) {
+    if (handle_unactivated_state($innerXMLObject)) {
+        // handle_unactivated_state will exit if it matches
+    } elseif (handle_activated_state($innerXMLObject)) {
+        // handle_activated_state will exit if it matches
+    }
+    // If neither of the specific handlers matched and exited,
+    // it might fall through to the default response, or it might mean
+    // $innerXMLObject was present but didn't match specific known final states.
+    // The original script implies the default response is the ultimate fallback
+    // if $innerXMLObject parsing failed OR if it didn't match specific states.
+    error_log(basename(__FILE__) . " - Inner XML object was present but did not match Unactivated or Activated final states. Proceeding to default response.");
+} else if (empty($activationInfoXMLString) && !$isCredentialsSubmission) {
+    // This condition means no initial XML was provided, and it wasn't credentials.
+    // This is a scenario where the original ideviceactivate (non -s mode) might connect.
+    error_log(basename(__FILE__) . " - No ActivationInfoXML provided and not a credentials submission. This might be a direct request for default activation files.");
+} else if (!empty($activationInfoXMLString) && $innerXMLObject === null) {
+    // This means parsing was attempted but failed.
+    error_log(basename(__FILE__) . " - ActivationInfoXML was provided but parsing failed. Proceeding to default response.");
+}
+
+
+// If the script has not exited by now, send the default/fallback response.
+send_default_fallback_response();
 
 /*
-// Example: Activate a device
-// Assumes device is connected and in a state ready for activation.
-// May need UDID or other parameters depending on ideviceactivation behavior.
-// $udidForActivation = null; // Or get from get_device_info() if needed.
+Conceptual Testing for this HTTP Endpoint:
+------------------------------------------
+Since this script (`lib_deviceactivation.php`) acts as an HTTP endpoint, testing involves
+simulating the requests that `ideviceactivation.exe -s` would send.
 
-// Example: Try to get UDID from get_device_info() if not already available
-// if (!$udidForActivation && isset($deviceInfo['UniqueDeviceID'])) {
-//     $udidForActivation = $deviceInfo['UniqueDeviceID'];
-// }
+1.  **Simulate POST Requests:**
+    *   Use tools like `curl`, Postman, or custom scripts to send HTTP POST requests to this script.
+    *   The body of the POST request should contain XML/plist data that mimics the different
+      payloads sent by `ideviceactivation.exe` at various stages. (Refer to the `albert.apple.com`
+      sample data in the repository for examples of these payloads if available).
 
+2.  **Verify Responses:**
+    *   **Content-Type:** Check that the `Content-Type` header in the response is correct
+      (e.g., `text/html`, `application/xml`).
+    *   **Response Body:** Verify that the XML/plist or HTML content of the response matches
+      what's expected for the given request payload (e.g., correct plist for credential step,
+      Activation Lock HTML for unactivated state, final activation record for activated state,
+      or the default fallback plist).
+    *   **HTTP Status Codes:** While this script primarily uses `http_response_code(405)` for
+      wrong method and `http_response_code(400)` for POST read errors, most valid interactions
+      will result in a 200 OK with a specific body.
 
-// if (activate_device($udidForActivation)) { // Pass UDID if your function expects it and it's available
-//     echo "Device activation successful.\n";
-// } else {
-//     echo "Device activation failed.\n";
-// }
-*/
+3.  **Test Scenarios:**
+    *   **Credential Submission:** POST with `Content-Type: application/x-www-form-urlencoded`
+      and `login`/`password`/`activation-info-base64` data. Expect the Step 3 HTML/plist response.
+    *   **Unactivated State:** POST XML data that, when parsed, shows `ActivationState` as `Unactivated`.
+      Expect the "Activation Lock" HTML page.
+    *   **Activated State:** POST XML data that shows `ActivationState` as `Activated` (and no
+      `ActivationRequestInfo`). Expect the final "iphone-activation" XML record.
+    *   **Default/Fallback:** POST minimal or unexpected XML data (or even an empty request if that's
+      a scenario `ideviceactivation.exe` might present for initial handshake/default files).
+      Expect the default `ActivationRecord` plist.
+    *   **Malformed XML/Data:** Send invalid XML to test error handling in `parse_activation_xml()`
+      (though it should still fall back to the default response).
 
-/*
-Conceptual Unit Tests:
-----------------------
-As this library interacts with external executables (`ideviceinfo`, `ideviceactivation`),
-true unit testing requires a test environment where these tools are installed and a device
-(or a mock of one) can be connected.
+4.  **Logging:**
+    *   Monitor the PHP error log during tests to see the trace of execution and any logged errors,
+      which is helpful for debugging.
 
-If direct execution is not possible during testing (e.g., in a CI pipeline without
-the necessary hardware/software setup), consider the following approaches:
-
-1.  **Mocking External Commands**:
-    *   Create wrapper scripts or use PHP's `override_function()` (with a library like Uopz or Patchwork)
-        to mock `shell_exec()` or `proc_open()`.
-    *   These mocks would return predefined outputs (strings) that simulate the actual
-        executables' behavior under different conditions (success, failure, specific data).
-
-2.  **Test `get_device_info()`**:
-    *   **Test Case 1: Successful output parsing.**
-        *   Mock `shell_exec()` to return a sample output string from `ideviceinfo`.
-        *   Assert that `get_device_info()` correctly parses this string into an associative array
-          (e.g., `['ProductType' => 'iPhone10,1', 'UniqueDeviceID' => 'SOMEUDID...']`).
-    *   **Test Case 2: Command execution failure.**
-        *   Mock `shell_exec()` to return `null` or simulate a non-zero exit code.
-        *   Assert that `get_device_info()` returns `false` and logs an error.
-    *   **Test Case 3: Empty or malformed output.**
-        *   Mock `shell_exec()` to return an empty string or malformed data.
-        *   Assert that `get_device_info()` handles this gracefully (returns `false`, logs error).
-
-3.  **Test `activate_device()`**:
-    *   **Test Case 1: Successful activation.**
-        *   Mock `proc_open()` (and related functions like `stream_get_contents`, `proc_close`)
-          to simulate `ideviceactivation activate` succeeding. This might involve
-          returning a specific exit code (0) and potentially some success message on stdout.
-        *   Assert that `activate_device()` returns `true`.
-    *   **Test Case 2: Activation failure (e.g., command error, device not ready).**
-        *   Mock `proc_open()` to simulate a non-zero exit code and/or error messages on stderr.
-        *   Assert that `activate_device()` returns `false` and logs an error.
-    *   **Test Case 3: Specific output parsing (if applicable).**
-        *   If `ideviceactivation` returns structured data (e.g., XML) that the function
-          is supposed to parse, test this parsing logic similar to `get_device_info()`.
-
-To implement these, a testing framework like PHPUnit would be beneficial. The tests would
-typically reside in a separate 'tests' directory.
+A dedicated testing tool or framework that can make HTTP requests and assert responses
+would be beneficial for automating these tests.
 */
 ?>
