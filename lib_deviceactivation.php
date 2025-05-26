@@ -60,28 +60,40 @@ $decodedrequest->save($devicefolder.'device-request-decoded.xml');
 
 # -------------------------------------------- Sign account token -----------------------------------------
 
-$accountToken2=
-'{'.(isset($imei) ? "\n\t".'"InternationalMobileEquipmentIdentity" = "'.$imei.'";' : '').'
-   '.(isset($meid) ? "\n\t".'"MobileEquipmentIdentifier" = "'.$meid.'";' : '').
-	"\n\t".'"ActivityURL" = "https://albert.apple.com/deviceservices/activity";'.
-	"\n\t".'"ActivationRandomness" = "'.$activationRandomness.'";'.
-	"\n\t".'"UniqueDeviceID" = "'.$uniqueDiviceID.'";'.
-	"\n\t".'"SerialNumber" = "'.$serialNumber.'";'.
+$accountToken2= 
+	"\n\t".'"InternationalMobileEquipmentIdentity" = "'.$InternationalMobileEquipmentIdentity.'";'.
+	"\n\t".'"ActivationTicket" = "MIIBkgIBATAKBggqhkjOPQQDAzGBn58/BKcA1TCfQAThQBQAn0sUYMeqwt5j6cNdU5ZeFkUyh+Fnydifh20HNWIoMpSJJp+IAAc1YigyaTIzn5c9GAAAAADu7u7u7u7u7xAAAADu7u7u7u7u75+XPgQAAAAAn5c/BAEAAACfl0AEAQAAAJ+XRgQGAAAAn5dHBAEAAACfl0gEAAAAAJ+XSQQBAAAAn5dLBAAAAACfl0wEAQAAAARnMGUCMDf5D2EOrSirzH8zQqox7r+Ih8fIaZYjFj7Q8gZChvnLmUgbX4t7sy/sKFt+p6ZnbQIxALyXlWNh9Hni+bTkmIzkfjGhw1xNZuFATlEpORJXSJAAifzq3GMirueuNaJ339NrxqN2MBAGByqGSM49AgEGBSuBBAAiA2IABA4mUWgS86Jmr2wSbV0S8OZDqo4aLqO5jzmX2AGBh9YHIlyRqitZFvB8ytw2hBwR2JjF/7sorfMjpzCciukpBenBeaiaL1TREyjLR8OuJEtUHk8ZkDE2z3emSrGQfEpIhQ==";
 	"\n\t".'"PhoneNumberNotificationURL" = "https://albert.apple.com/deviceservices/phoneHome";'.
-	"\n\t".'"ProposedTicket" = "MIICHAIBATALBgkqhkiG9w0BAQWgdzB1AzEAgn1X4NL5tuZIoIjDh5meADOm1sDvpHjtnI9OxfqdZlEDGLZMaeaPY6O+iD0xsB7TBEAaNS6IKhyHU2k9An41IulixP/uC3zWZOIqseSIUyRawhu7/emlH8rRXUWCRopOJks7LNaywlVGTUBGNf3LSRE4MW6fPwQkKcken0AE4QBaAJ9LFFSASxcGlMJDZKMdGYHornvS53uOn4drB5kAAYZyB0ifh20HmQABhnIHSJ+XOAczMTBWWlcAn5c9DAAAAADu7u7u7u7u75+XPgQBAAAAn5c/BAEAAACfl0AEAAAAAASBgKLIKQ5BrMkZh74IoXp54aESoz6VMZHiqvoBUIIOt/+lUqisfpGKOCqjBmE5X20sy6oTeRo9/wph/+BHPJacFE1CJfCMKITvJ2O4c8ZurHX23wOcEERvwCuSZ9gkDhVSm+veC4ZY84Cxma+owiuFquxltae//xxcj3Mv5DfUl6oAo4GdMAsGCSqGSIb3DQEBAQOBjQAwgYkCgYEA7To/ZNHoIJzBUgY0734vsgl+ACxDQ+f4quvmSrPAtgDENSZwaVrHXpF+cRKBABqkDa00YcENx2dtS1tuHLKDNn1zMZLaZRpiK9UeiMPNZL6mlg12BWLwVjlFOGED8U6pfXwOw6D/FCDRgvyGBn7wsw8sEa7AdlYmMHGmkvwgOP0CAwEAAQ==\n";'.
-	"\n\t".'"FactoryActivated" = "True";'.
-	"\n".
- '}';
-$accountToken=
-'{'.(isset($imei) ? "\n\t".'"InternationalMobileEquipmentIdentity" = "'.$imei.'";' : '').'
-   '.(isset($meid) ? "\n\t".'"MobileEquipmentIdentifier" = "'.$meid.'";' : '').
-	"\n\t".'"ActivityURL" = "https://albert.apple.com/deviceservices/activity";'.
-	"\n\t".'"ActivationRandomness" = "'.$activationRandomness.'";'.
+	"\n\t".'"InternationalMobileSubscriberIdentity" = "'.$InternationalMobileSubscriberIdentity.'";'.
+	"\n\t".'"ProductType" = "'.$ProductType".'";'.
 	"\n\t".'"UniqueDeviceID" = "'.$uniqueDiviceID.'";'.
 	"\n\t".'"SerialNumber" = "'.$serialNumber.'";'.
+	"\n\t".'"MobileEquipmentIdentifier" = "'.$MobileEquipmentIdentifier.'";'.
+	"\n\t".'"InternationalMobileEquipmentIdentity2" = "'.$InternationalMobileEquipmentIdentity2.'";'.
+	"\n\t".'"PostponementInfo" = "'.$PostponementInfo.'";'.
+	"\n\t".'"ActivationRandomness" = "'.$activationRandomness.'";'.
+	"\n\t".'"ActivityURL" = "https://albert.apple.com/deviceservices/activity.'";'.
+	"\n\t".'"IntegratedCircuitCardIdentity" = "'.$IntegratedCircuitCardIdentity.'";'.
 	"\n\t".'"FactoryActivated" = "True";'.
 	"\n".
- '}';
+ '}';	
+$accountToken= 
+	"\n\t".'"InternationalMobileEquipmentIdentity" = "'.$InternationalMobileEquipmentIdentity.'";'.
+	"\n\t".'"ActivationTicket" = "MIIBkgIBATAKBggqhkjOPQQDAzGBn58/BKcA1TCfQAThQBQAn0sUYMeqwt5j6cNdU5ZeFkUyh+Fnydifh20HNWIoMpSJJp+IAAc1YigyaTIzn5c9GAAAAADu7u7u7u7u7xAAAADu7u7u7u7u75+XPgQAAAAAn5c/BAEAAACfl0AEAQAAAJ+XRgQGAAAAn5dHBAEAAACfl0gEAAAAAJ+XSQQBAAAAn5dLBAAAAACfl0wEAQAAAARnMGUCMDf5D2EOrSirzH8zQqox7r+Ih8fIaZYjFj7Q8gZChvnLmUgbX4t7sy/sKFt+p6ZnbQIxALyXlWNh9Hni+bTkmIzkfjGhw1xNZuFATlEpORJXSJAAifzq3GMirueuNaJ339NrxqN2MBAGByqGSM49AgEGBSuBBAAiA2IABA4mUWgS86Jmr2wSbV0S8OZDqo4aLqO5jzmX2AGBh9YHIlyRqitZFvB8ytw2hBwR2JjF/7sorfMjpzCciukpBenBeaiaL1TREyjLR8OuJEtUHk8ZkDE2z3emSrGQfEpIhQ==";
+	"\n\t".'"PhoneNumberNotificationURL" = "https://albert.apple.com/deviceservices/phoneHome";'.
+	"\n\t".'"InternationalMobileSubscriberIdentity" = "'.$InternationalMobileSubscriberIdentity.'";'.
+	"\n\t".'"ProductType" = "'.$ProductType".'";'.
+	"\n\t".'"UniqueDeviceID" = "'.$uniqueDiviceID.'";'.
+	"\n\t".'"SerialNumber" = "'.$serialNumber.'";'.
+	"\n\t".'"MobileEquipmentIdentifier" = "'.$MobileEquipmentIdentifier.'";'.
+	"\n\t".'"InternationalMobileEquipmentIdentity2" = "'.$InternationalMobileEquipmentIdentity2.'";'.
+	"\n\t".'"PostponementInfo" = "'.$PostponementInfo.'";'.
+	"\n\t".'"ActivationRandomness" = "'.$activationRandomness.'";'.
+	"\n\t".'"ActivityURL" = "https://albert.apple.com/deviceservices/activity.'";'.
+	"\n\t".'"IntegratedCircuitCardIdentity" = "'.$IntegratedCircuitCardIdentity.'";'.
+	"\n\t".'"FactoryActivated" = "True";'.
+	"\n".
+ '}';	
 
 $accountTokenBase64=base64_encode($accountToken);
 $accountTokenBase642=base64_encode($accountToken2);
@@ -140,21 +152,23 @@ file_put_contents($productVersion.'-'.$serialNumber.'.html','<!DOCTYPE html><htm
 		<dict>
 			<key>activation-record</key>
 			<dict>
-				<key>FairPlayKeyData</key>
-				<data>'.$fairPlayKeyData.'</data>
+				<key>unbrick</key>
+				<true/>
 				<key>AccountTokenCertificate</key>
-				<data>'.$accountTokenCertificateBase64.'</data>
+				<data>'.$accountTokenCertificate.'</data>
 				<key>DeviceCertificate</key>
 				<data>'.$deviceCertificate.'</data>
-				<key>AccountTokenSignature</key>
-				<data>'.$accountTokenSignature2.'</data>
+				<key>RegulatoryInfo</key>
+				<data>'.$regulatoryInfo.'</data>
+				<key>FairPlayKeyData</key>
+				<data>'.$fairPlayKeyData.'</data>
 				<key>AccountToken</key>
-				<data>'.$accountTokenBase642.'</data>
+				<data>'.$accountToken.'</data>
+				<key>AccountTokenSignature</key>
+				<data>'.$accountTokenSignature.'</data>
+				<key>UniqueDeviceCertificate</key>
+				<data>'.$uniqueDeviceCertificate.'</data>
 			</dict>
-			<key>unbrick</key>
-			<true/>
-			<key>show-settings</key>
-			<true/>
 		</dict>
 	</dict>
 </plist>
@@ -168,26 +182,44 @@ $response ='<!DOCTYPE html><html><head><meta http-equiv="Content-Type" content="
 		<dict>
 			<key>activation-record</key>
 			<dict>
-				<key>FairPlayKeyData</key>
-				<data>'.$fairPlayKeyData.'</data>
+				<key>unbrick</key>
+				<true/>
 				<key>AccountTokenCertificate</key>
-				<data>'.$accountTokenCertificateBase64.'</data>
+				<data>'.$accountTokenCertificate.'</data>
 				<key>DeviceCertificate</key>
 				<data>'.$deviceCertificate.'</data>
-				<key>AccountTokenSignature</key>
-				<data>'.$accountTokenSignature2.'</data>
+				<key>RegulatoryInfo</key>
+				<data>'.$regulatoryInfo.'</data>
+				<key>FairPlayKeyData</key>
+				<data>'.$fairPlayKeyData.'</data>
 				<key>AccountToken</key>
-				<data>'.$accountTokenBase642.'</data>
+				<data>'.$accountToken.'</data>
+				<key>AccountTokenSignature</key>
+				<data>'.$accountTokenSignature.'</data>
+				<key>UniqueDeviceCertificate</key>
+				<data>'.$uniqueDeviceCertificate.'</data>
 			</dict>
-			<key>unbrick</key>
-			<true/>
-			<key>show-settings</key>
-			<true/>
 		</dict>
 	</dict>
 </plist>
 </script><script>var protocolElement = document.getElementById("protocol");var protocolContent = protocolElement.innerText;iTunes.addProtocol(protocolContent);</script></head>
 </html>';
+
+$response ='<!DOCTYPE html><html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><meta name="keywords" content="iTunes Store" /><meta name="description" content="iTunes Store" /><title>iPhone Activation</title><link href="http://static.ips.apple.com/ipa_itunes/stylesheets/shared/common-min.css" charset="utf-8" rel="stylesheet" /><link href="http://static.ips.apple.com/deviceservices/stylesheets/styles.css" charset="utf-8" rel="stylesheet" /><link href="http://static.ips.apple.com/ipa_itunes/stylesheets/pages/IPAJingleEndPointErrorPage-min.css" charset="utf-8" rel="stylesheet" /><link href="resources/auth_styles.css" charset="utf-8" rel="stylesheet" /><script id="protocol" type="text/x-apple-plist">
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>iphone-activation</key>
+    <dict>
+        <key>ack-received</key>
+        <true/>
+        <key>show-settings</key>
+        <true/>
+        <key>activation-record</key>
+    </dict>
+</dict>
+</plist>"""
+
 echo $response;
 exit;
 ?>
