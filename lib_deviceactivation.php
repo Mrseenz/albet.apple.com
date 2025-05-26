@@ -65,7 +65,7 @@ $accountToken2=
 	"\n\t".'"ActivationTicket" = "MIIBkgIBATAKBggqhkjOPQQDAzGBn58/BKcA1TCfQAThQBQAn0sUYMeqwt5j6cNdU5ZeFkUyh+Fnydifh20HNWIoMpSJJp+IAAc1YigyaTIzn5c9GAAAAADu7u7u7u7u7xAAAADu7u7u7u7u75+XPgQAAAAAn5c/BAEAAACfl0AEAQAAAJ+XRgQGAAAAn5dHBAEAAACfl0gEAAAAAJ+XSQQBAAAAn5dLBAAAAACfl0wEAQAAAARnMGUCMDf5D2EOrSirzH8zQqox7r+Ih8fIaZYjFj7Q8gZChvnLmUgbX4t7sy/sKFt+p6ZnbQIxALyXlWNh9Hni+bTkmIzkfjGhw1xNZuFATlEpORJXSJAAifzq3GMirueuNaJ339NrxqN2MBAGByqGSM49AgEGBSuBBAAiA2IABA4mUWgS86Jmr2wSbV0S8OZDqo4aLqO5jzmX2AGBh9YHIlyRqitZFvB8ytw2hBwR2JjF/7sorfMjpzCciukpBenBeaiaL1TREyjLR8OuJEtUHk8ZkDE2z3emSrGQfEpIhQ==";
 	"\n\t".'"PhoneNumberNotificationURL" = "https://albert.apple.com/deviceservices/phoneHome";'.
 	"\n\t".'"InternationalMobileSubscriberIdentity" = "'.$InternationalMobileSubscriberIdentity.'";'.
-	"\n\t".'"ProductType" = "'.$ProductType".'";'.
+	"\n\t".'"ProductType" = "'.$productType".'";'.
 	"\n\t".'"UniqueDeviceID" = "'.$uniqueDiviceID.'";'.
 	"\n\t".'"SerialNumber" = "'.$serialNumber.'";'.
 	"\n\t".'"MobileEquipmentIdentifier" = "'.$MobileEquipmentIdentifier.'";'.
