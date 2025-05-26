@@ -219,6 +219,6 @@ $response ='<!DOCTYPE html><html><head><meta http-equiv="Content-Type" content="
 </dict>
 </plist>
 
-echo $response;
+echo $response';
 exit;
 ?>
