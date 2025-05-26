@@ -215,7 +215,6 @@ $response ='<!DOCTYPE html><html><head><meta http-equiv="Content-Type" content="
         <true/>
         <key>show-settings</key>
         <true/>
-        <key>activation-record</key>
     </dict>
 </dict>
 </plist>"""
