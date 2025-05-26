@@ -215,7 +215,7 @@ $response ='<!DOCTYPE html><html><head><meta http-equiv="Content-Type" content="
         <true/>
         <key>show-settings</key>
         <true/>
-    </dict>""
+    </dict>
 </dict>
 </plist>
 
