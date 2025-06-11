@@ -1,7 +1,7 @@
---A5CBF3ABBB21A68A500F9EF137F51D72
-Content-Disposition: form-data; name="activation-info"
-
+<?xml version="1.0"?>
 <dict>
+	<key>ActivationInfoComplete</key>
+	<true/>
 	<key>ActivationInfoXML</key>
 	<data>
 	PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCFET0NUWVBFIHBs
